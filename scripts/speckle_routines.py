@@ -3,6 +3,7 @@
 import numpy as np
 import scipy.misc
 import math
+from scipy.ndimage.filters import gaussian_filter
 
 def sample2ddist(asicshape,kbar,dist):
     """
@@ -115,3 +116,29 @@ def simulate_gaussian_noise(asicshape,noise_mu=1,noise_sigma=0.1):
     sig = np.random.normal(noise_mu,noise_sigma,[nx,ny])
     return sig
 
+def simulate_charge_sharing(asicshape,modes,specklesize,kbar,sigma=1):
+    """
+    returns a 2D speckle pattern with given speckle size, contrast
+    (1/modes) and photon density kbar (photons/pixel)
+    including charge sharing simulated with a gaussian at each photon position with with sigma
+    """
+    #Definitions
+    nasic = asicshape[0]*asicshape[1]
+    nphotons = np.round(kbar*nasic).astype(int) 
+    photons = np.zeros(asicshape)
+    photons_blur = np.zeros(asicshape)
+    dist = model_speckles_modes(asicshape,specklesize,modes).flatten()
+
+    #sample photon positions from given distribution
+    sampl = np.random.choice(nasic,nphotons,p=dist)
+
+    #convert to 2d and accumulate photons
+    for i in range (nphotons):
+    	ix = sampl[i]/asicshape[1]
+    	iy = sampl[i]%asicshape[1]
+        photons_blur = np.zeros(asicshape)
+    	photons_blur[ix,iy] = 1
+        photons_blur = gaussian_filter(photons_blur,sigma=sigma)
+        photons += photons_blur
+
+    return photons
